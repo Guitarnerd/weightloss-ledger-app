@@ -303,8 +303,17 @@
     async function call(url, options) {
       const res = await fetch(url, Object.assign({ headers, cache: 'no-store' }, options));
       if (res.ok) return res;
-      const err = new Error(res.status === 401 ? 'GitHub rejected the token' : res.status === 404
-        ? 'Repo or file not found (check the repo name and the token\'s access)' : `GitHub error ${res.status}`);
+      let message = `GitHub error ${res.status}`;
+      if (res.status === 401) message = 'GitHub rejected the token. It may be mistyped or expired: paste it again in Settings.';
+      if (res.status === 403) message = 'The token can see the repo but may not change it. Edit the token and set Contents to "Read and write".';
+      if (res.status === 404) {
+        // GitHub answers 404 for a private repo the token was not given, so check which it is
+        const repoSeen = await fetch(`https://api.github.com/repos/${repo}`, { headers, cache: 'no-store' }).then(r => r.ok, () => false);
+        message = repoSeen
+          ? `${repo} is missing a file the app needs, or the token lacks Contents access.`
+          : `This token can't see ${repo}. Edit the token: Repository access, "Only select repositories", choose ${repo.split('/')[1]} (not the -app repo), and set Contents to "Read and write".`;
+      }
+      const err = new Error(message);
       err.status = res.status;
       throw err;
     }

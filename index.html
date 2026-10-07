@@ -73,6 +73,7 @@ label { font-size: 13px; color: var(--muted); display: block; margin: 10px 0 4px
   <section class="card hidden" id="settings">
     <h2>Settings</h2>
     <p class="muted">Paste a GitHub fine-grained token that can read and write <b>Contents</b> on the ledger repo only. It is stored on this device and sent only to api.github.com.</p>
+    <p class="muted">When you create the token, choose "Only select repositories" and pick the ledger repo itself, not the app repo.</p>
     <label for="set-repo">Ledger repo</label>
     <input id="set-repo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="owner/repo">
     <label for="set-token">GitHub token</label>
