@@ -163,6 +163,10 @@
   function splitSegments(text) {
     const numberStart = new RegExp('^(?:' + NUM + '(?!\\s*%)|(?:' + Object.keys(NUMBER_WORDS).join('|') + ')\\s)', 'i');
     const out = [];
+    // A full stop ends an item when a new one clearly starts after it ("...spaghetti. A quarter cup...");
+    // unit abbreviations like "tbsp. of ranch" and decimals like "1.5" are left alone.
+    text = text.replace(/([a-z]{3,})\.\s+(?=[A-Z0-9½¼¾⅓⅔⅛])/g,
+      (whole, word) => (/^(tbsp|tsp|tbs|lbs|pcs|approx)$/i.test(word) ? whole : word + '\n'));
     text.split(/[\n;]+|,(?!\d)/).forEach(part => {
       const pieces = part.split(/\s+(?:and|plus)\s+/i);
       let current = pieces[0];

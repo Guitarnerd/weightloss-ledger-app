@@ -1,5 +1,5 @@
 // Keeps a copy of the app shell so it opens instantly; always prefers the network copy.
-const CACHE = 'ledger-shell-v2';
+const CACHE = 'ledger-shell-v3';
 const SHELL = ['./', 'index.html', 'app.js', 'core.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', event => {
