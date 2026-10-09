@@ -198,7 +198,7 @@
   const round1 = n => Math.round(n * 10) / 10;
 
   // Turn one typed segment into a food.csv-shaped item, with an estimate and a confidence flag.
-  function estimate(segment, reference) {
+  function estimateFood(segment, reference) {
     let { quantity, unit, name } = splitQuantity(segment);
     let { food, score } = bestMatch(name, reference);
     if (/^(small|medium|large)$/.test(unit || '')) {
@@ -240,8 +240,33 @@
     };
   }
 
+  const STATED = /(\d[\d,]*)\s*-?\s*k?cal(?:orie)?s?\b(\s+each)?/i;
+
+  // Calories given in the text win over the estimate: "one 460-calorie muffin",
+  // "2 protein shakes 190 calories each". The macros are scaled to fit and flagged for checking.
+  function estimate(segment, reference) {
+    const m = segment.match(STATED);
+    if (!m) return estimateFood(segment, reference);
+    const rest = segment.replace(m[0], ' ').replace(/\s+/g, ' ').replace(/[\s,(@-]+$/, '').replace(/\s+at$/i, '').trim();
+    const item = estimateFood(rest || segment, reference);
+    const each = !!m[2] || /\d\s*-\s*k?cal/i.test(m[0]);
+    const total = Math.round(+m[1].replace(/,/g, '') * (each ? item.quantity : 1));
+    const k = item.calories ? total / item.calories : 1;
+    return Object.assign(item, {
+      calories: total, protein_g: round1(item.protein_g * k), carbs_g: round1(item.carbs_g * k),
+      fat_g: round1(item.fat_g * k), source: 'label', confident: false,
+      note: `unverified; typed: ${segment.trim().replace(/\s+/g, ' ')}`, why: 'calories as typed; protein, carbs and fat estimated',
+    });
+  }
+
   function parseEntry(text, reference) {
-    return splitSegments(text).map(s => estimate(s, reference));
+    const segments = [];
+    splitSegments(text).forEach(s => {
+      // "2 shakes, 190 calories each": the calories belong to the item before the comma
+      if (segments.length && new RegExp('^\\W*' + STATED.source + '\\W*$', 'i').test(s)) segments[segments.length - 1] += ' ' + s;
+      else segments.push(s);
+    });
+    return segments.map(s => estimate(s, reference));
   }
 
   // ---- Ledger maths ----

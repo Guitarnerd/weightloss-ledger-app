@@ -59,6 +59,11 @@ assert.deepStrictEqual(list.map(i => i.item), ['Macaroni and cheese', 'Egg', 'Br
 const dictated = Core.parseEntry('2 cups of spaghetti. A quarter cup of low-fat sharp cheddar cheese', reference);
 assert.deepStrictEqual(dictated.map(i => [i.item, i.calories]), [['Spaghetti', 400], ['Low-fat shredded cheddar cheese', 80]]);
 assert.deepStrictEqual(Core.parseEntry('1 tbsp. of ranch dressing. 1.5 cups of baby carrots', reference).map(i => i.calories), [73, 67]);
+const stated = (text) => Core.parseEntry(text, reference).map(i => [i.item, i.calories, i.source]);
+assert.deepStrictEqual(stated('One 460-calorie jumbo muffin from Cub Foods.'), [['Jumbo muffin', 460, 'label']]);
+assert.deepStrictEqual(stated('2 rockin protein shakes, 190 calories each'), [['Rockin Protein shake', 380, 'label']]);
+assert.deepStrictEqual(stated('gas station burrito 520 cal, 1 apple'), [['Burrito', 520, 'label'], ['Apple', 95, 'app']]);
+assert.strictEqual(Core.parseEntry('3 mystery bars at 150 calories each', reference)[0].calories, 450);
 console.log('ok  multi-item entries');
 
 const days = [['2026-10-01', 'complete'], ['2026-10-02', 'complete'], ['2026-10-03', 'complete']]
