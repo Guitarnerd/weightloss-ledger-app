@@ -35,7 +35,7 @@
         .filter(r => r.date >= '2026-10-01').reverse()),
       [PATHS.reference]: JSON.stringify([
         { name: '2% milk', aliases: ['milk'], grams: 100, calories: 50, protein_g: 3.5, carbs_g: 5, fat_g: 2, units: { cup: 244 }, default: 'cup' },
-        { name: 'Vanilla protein powder', aliases: ['protein powder'], grams: 30, calories: 120, protein_g: 24, carbs_g: 3, fat_g: 1, units: { scoop: 30 }, default: 'scoop' },
+        { name: 'Vanilla protein powder', aliases: ['protein powder'], grams: 40, calories: 160, protein_g: 25, carbs_g: 7, fat_g: 3, units: { scoop: 40 }, default: 'scoop' },
         { name: 'Nonfat vanilla Greek yogurt', aliases: ['greek yogurt', 'yogurt'], grams: 170, calories: 100, protein_g: 17, carbs_g: 15, fat_g: 0, units: { cup: 225 }, default: 'cup' },
         { name: 'Frozen broccoli', aliases: ['broccoli'], grams: 340, calories: 100, protein_g: 9, carbs_g: 18, fat_g: 1, units: { bag: 340, cup: 90 }, default: 'bag' },
         { name: 'Shredded cheddar cheese', aliases: ['cheddar', 'shredded cheddar'], grams: 28, calories: 110, protein_g: 7, carbs_g: 0.5, fat_g: 9, units: { cup: 112, tbsp: 7 }, default: 'tbsp' },
