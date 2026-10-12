@@ -19,8 +19,8 @@ for (const file of ['food.csv', 'weight.csv', 'days.csv']) {
 const cases = [
   ['200 g of 2% milk', '2% milk', 100, 0, true],
   ['250g 2% milk', '2% milk', 125, 0, true],
-  ['one scoop of protein powder', 'Vanilla protein powder', 120, 0, true],
-  ['3 scoops protein powder', 'Vanilla protein powder', 360, 0, true],
+  ['one scoop of protein powder', 'Vanilla protein powder', 160, 0, true],
+  ['3 scoops protein powder', 'Vanilla protein powder', 480, 0, true],
   ['170 g of nonfat vanilla Greek yogurt', 'Nonfat vanilla Greek yogurt', 100, 0, true],
   ['a bag of broccoli', 'Frozen broccoli', 100, 0, true],
   ['1 bag of broccoli', 'Frozen broccoli', 100, 0, true],
@@ -40,7 +40,7 @@ const cases = [
   ['a knob of butter', 'Butter', 100, 0, true],
   ['1 piece of cornbread', 'Cornbread', 180, 0, true],
   ['1 cup of homemade chili', 'Homemade chili', 280, 0, true],
-  ['protein powder 2 scoops', 'Vanilla protein powder', 240, 0, true],
+  ['protein powder 2 scoops', 'Vanilla protein powder', 320, 0, true],
   ['2 Rockin protein shakes', 'Rockin Protein shake', 380, 0, true],
   ['dragonfruit smoothie bowl', 'Dragonfruit smoothie bowl', 200, 0, false],
 ];
@@ -53,7 +53,7 @@ for (const [text, item, cal, tol, confident] of cases) {
 console.log(`ok  ${cases.length} food estimates`);
 
 const multi = Core.parseEntry('200 g 2% milk, 170 g of nonfat vanilla Greek yogurt, and one scoop of protein powder.', reference);
-assert.deepStrictEqual(multi.map(i => i.calories), [100, 100, 120]);
+assert.deepStrictEqual(multi.map(i => i.calories), [100, 100, 160]);
 const list = Core.parseEntry('- 1 cup of mac and cheese\n- 2 eggs and 1 slice of toast', reference);
 assert.deepStrictEqual(list.map(i => i.item), ['Macaroni and cheese', 'Egg', 'Bread']);
 const dictated = Core.parseEntry('2 cups of spaghetti. A quarter cup of low-fat sharp cheddar cheese', reference);
