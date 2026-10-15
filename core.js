@@ -316,6 +316,78 @@
     return { current: run, best, missed, pending };
   }
 
+  // ---- Plans, marks and go-to orders: plans.csv, events.csv, orders.csv (same rules as tools/ledger.py) ----
+
+  const PLAN_FIELDS = ['date', 'slot', 'plan', 'tag', 'planned_at', 'status', 'entry_id', 'note'];
+  const EVENT_FIELDS = ['date', 'time', 'kind', 'value', 'ref'];
+  const ORDER_FIELDS = ['restaurant', 'item', 'quantity', 'unit', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'note'];
+  const SLOTS = [['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['afternoon', 'Afternoon snack'],
+    ['dinner', 'Dinner'], ['evening', 'Evening snack']];
+  const REQUIRED_SLOTS = ['dinner', 'evening'];
+  const PLAN_START = '2026-10-15';
+  const PLAN_CUTOFF = '16:00';
+  const DEBRIEF = [['arrived hungry', 'Arrived hungry'], ['grazing at the event', 'Grazing at the event'],
+    ['after getting home', 'After getting home'], ['other', 'Other']];
+  const BIG_DAY = 1.25; // the debrief is offered after a day above 125% of the calorie target
+
+  // A day counts when dinner and the evening snack were both planned before 4 PM that day.
+  function plannedAhead(plans, date) {
+    const deadline = date + ' ' + PLAN_CUTOFF;
+    return REQUIRED_SLOTS.every(slot => plans.some(p => p.date === date && p.slot === slot &&
+      p.plan.trim() && p.planned_at && p.planned_at < deadline));
+  }
+
+  // Today only adds to the run once it's planned; an unplanned today doesn't break it until it's over.
+  function planStreak(plans, today) {
+    let run = 0, best = 0;
+    for (let d = PLAN_START; d <= today; d = addDays(d, 1)) {
+      if (plannedAhead(plans, d)) run++;
+      else if (d !== today) run = 0;
+      best = Math.max(best, run);
+    }
+    return { current: run, best, today: plannedAhead(plans, today) };
+  }
+
+  // Edits are [{slot, plan, tag, note}]. A plan already eaten (or swapped) is left alone; an emptied
+  // plan is removed; an edited plan keeps the time it was first made, so the planning streak holds.
+  function upsertPlans(rows, date, edits, stamp) {
+    const order = SLOTS.map(s => s[0]);
+    let out = rows.slice();
+    edits.forEach(e => {
+      const old = out.find(p => p.date === date && p.slot === e.slot);
+      if (old && old.status) return;
+      const text = (e.plan || '').trim();
+      if (!text) { out = out.filter(p => p !== old); return; }
+      if (old) Object.assign(old, { plan: text, tag: e.tag || '', note: e.note || '' });
+      else out.push({ date, slot: e.slot, plan: text, tag: e.tag || '', planned_at: stamp, status: '', entry_id: '', note: e.note || '' });
+    });
+    return out.sort((a, b) => a.date.localeCompare(b.date) || order.indexOf(a.slot) - order.indexOf(b.slot));
+  }
+
+  function weightTrend(rows, today) {
+    const mean = (from, to) => {
+      const w = rows.filter(r => r.date > from && r.date <= to).map(r => +r.weight_lb);
+      return w.length ? w.reduce((a, b) => a + b, 0) / w.length : null;
+    };
+    const avg = mean(addDays(today, -7), today), prev = mean(addDays(today, -14), addDays(today, -7));
+    return { avg, prev, change: avg !== null && prev !== null ? avg - prev : null };
+  }
+
+  function bigDay(foodRows, date, calorieTarget) {
+    return totals(foodRows.filter(r => r.date === date)).calories > calorieTarget * BIG_DAY;
+  }
+
+  function orderNames(orders) {
+    return [...new Set(orders.map(r => r.restaurant))].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  }
+
+  // A go-to order as food rows, ready to log.
+  function orderItems(orders, restaurant) {
+    return orders.filter(r => r.restaurant === restaurant).map(r => ({
+      item: r.item, quantity: r.quantity, unit: r.unit, calories: num(r.calories), protein_g: num(r.protein_g),
+      carbs_g: num(r.carbs_g), fat_g: num(r.fat_g), source: 'saved', note: r.note || '' }));
+  }
+
   // ---- GitHub contents API: the ledger repo is the database ----
 
   const b64encode = text => {
@@ -363,7 +435,9 @@
 
   const api = { FOOD_FIELDS, WEIGHT_FIELDS, DAYS_FIELDS, MACROS, parseCSV, toCSV, chicagoNow, addDays,
     prettyDate, splitQuantity, splitSegments, bestMatch, estimate, parseEntry, totals, nextEntryId,
-    sortFood, parseTargets, streak, num, github };
+    sortFood, parseTargets, streak, num, github,
+    PLAN_FIELDS, EVENT_FIELDS, ORDER_FIELDS, SLOTS, REQUIRED_SLOTS, PLAN_START, PLAN_CUTOFF, DEBRIEF,
+    plannedAhead, planStreak, upsertPlans, weightTrend, bigDay, orderNames, orderItems };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Core = api;
 })(typeof self !== 'undefined' ? self : this);
