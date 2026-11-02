@@ -3,6 +3,7 @@
 A small installable web app for logging food and weight from a phone. It has no server and no database of its own: it reads and writes the CSV files in a separate, private "ledger" GitHub repo through the GitHub API. This repo holds only the app's code.
 
 - **Log food** by typing or dictating ("200 g 2% milk, 1 scoop protein powder, a bag of broccoli"). The app matches each item against the ledger's `data/reference.json` food list and shows the estimate before you log it. Anything it isn't sure of is saved with an `unverified` note so it can be checked later.
+- **Meals in one message**: "Breakfast: ... Lunch: ... Dinner: ... and yogurt for a snack" logs each meal as its own entry at a usual time (breakfast 8:00, lunch 12:30, afternoon snack 3:00, dinner 6:30, evening snack 8:30), so a catch-up doesn't read as one huge sitting.
 - **Running tally** for the day: calories, protein, carbs and fat, eaten versus left.
 - **Morning check-in**: close yesterday, weigh in, plan today's dinner and evening snack, then a small celebration for finishing it.
 - **Logging streak** and a separate **planning streak** (days where dinner and the evening snack were planned before 4 PM).

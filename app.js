@@ -108,6 +108,8 @@
   const plansFor = date => csv(PATHS.plans).filter(p => p.date === date);
   const events = () => csv(PATHS.events);
   const checkedIn = date => events().some(e => e.date === date && e.kind === 'checkin');
+  // Entries read in the order they were eaten, which a catch-up can make different from the order logged
+  const byTime = groups => Object.keys(groups).sort((a, b) => groups[a][0].time.localeCompare(groups[b][0].time) || a.localeCompare(b));
   const yesterdayClosed = () => { const y = C.addDays(today(), -1); return y < '2026-10-01' || csv(PATHS.days).some(r => r.date === y); };
   const gumLabel = () => store.get('wl_gum') || 'Gum in';
 
@@ -120,18 +122,22 @@
     }, message);
   }
 
-  // Writes food rows as one new entry and returns its entry_id.
-  async function writeEntry(date, time, items, message) {
-    let entryId = null;
+  // Writes each { time, items } group as its own new entry, in one commit, and returns their entry_ids.
+  async function writeEntries(date, groups, message) {
+    let ids = [];
     await mutate(PATHS.food, text => {
       const { rows } = C.parseCSV(text);
-      entryId = C.nextEntryId(rows, date);
-      items.forEach(i => rows.push({ date, time, entry_id: entryId, item: i.item, quantity: i.quantity, unit: i.unit,
-        calories: i.calories, protein_g: i.protein_g, carbs_g: i.carbs_g, fat_g: i.fat_g, source: i.source, note: i.note }));
+      ids = groups.map(g => {
+        const entryId = C.nextEntryId(rows, date);
+        g.items.forEach(i => rows.push({ date, time: g.time, entry_id: entryId, item: i.item, quantity: i.quantity, unit: i.unit,
+          calories: i.calories, protein_g: i.protein_g, carbs_g: i.carbs_g, fat_g: i.fat_g, source: i.source, note: i.note }));
+        return entryId;
+      });
       return C.toCSV(C.FOOD_FIELDS, C.sortFood(rows));
     }, message);
-    return entryId;
+    return ids;
   }
+  const writeEntry = async (date, time, items, message) => (await writeEntries(date, [{ time, items }], message))[0];
 
   // ---- Rendering ----
 
@@ -187,7 +193,7 @@
     const groups = {}, gum = {};
     rows.forEach(r => { (groups[r.entry_id] = groups[r.entry_id] || []).push(r); });
     events().filter(e => e.kind === 'gum' && e.ref).forEach(e => { gum[e.ref] = e.time; });
-    $('entries').innerHTML = Object.keys(groups).sort().map(id => {
+    $('entries').innerHTML = byTime(groups).map(id => {
       const g = groups[id], cal = g.reduce((s, r) => s + C.num(r.calories), 0);
       const end = gum[id] ? `<span class="gum-done">${esc(gumLabel())} ${esc(clock(gum[id]))}</span>`
         : `<button class="ghost" data-gum="${esc(id)}">${esc(gumLabel())}</button>`;
@@ -199,16 +205,35 @@
     }).join('');
   }
 
+  // What's typed, as { label, time, items } groups in eating order. Meal names set the time; anything
+  // else uses the Time eaten box. On today, a meal time still ahead of the clock is held to now.
+  function mealGroups() {
+    const box = $('food').value;
+    if (!box.trim()) return { groups: [], skipped: [] };
+    const { sections, skipped } = C.splitMeals(box), date = targetDate(), now = C.chicagoNow();
+    const typedTime = $('time').value || now.time;
+    const groups = sections.map(s => {
+      const time = !s.label ? typedTime : date === now.date && s.time > now.time ? now.time : s.time;
+      return { label: s.label, time, items: C.parseEntry(s.text, reference()) };
+    }).filter(g => g.items.length);
+    return { groups: groups.sort((a, b) => a.time.localeCompare(b.time)), skipped };
+  }
+
   function renderPreview() {
-    const items = $('food').value.trim() ? C.parseEntry($('food').value, reference()) : [];
-    $('preview').innerHTML = items.map(i =>
-      `<li><span>${esc(i.item)} <span class="muted">${esc(i.quantity)} ${esc(i.unit)}</span>` +
+    const { groups, skipped } = mealGroups();
+    const items = groups.flatMap(g => g.items), meals = groups.some(g => g.label) || skipped.length > 0;
+    const row = i => `<li><span>${esc(i.item)} <span class="muted">${esc(i.quantity)} ${esc(i.unit)}</span>` +
       (i.confident ? '' : `<span class="flag">${esc(i.why)}</span>`) +
-      `</span><span class="cal">${fmt(i.calories)} cal</span></li>`).join('');
-    const total = items.reduce((s, i) => s + i.calories, 0);
+      `</span><span class="cal">${fmt(i.calories)} cal</span></li>`;
+    $('preview').innerHTML = skipped.map(s => `<li class="meal-head"><span>No ${esc(s.toLowerCase())}</span></li>`).join('') +
+      groups.map(g => (meals ? `<li class="meal-head"><span>${esc(g.label || 'Other')} · ${esc(clock(g.time))}</span>` +
+        `<span class="cal">${fmt(g.items.reduce((s, i) => s + i.calories, 0))}</span></li>` : '') + g.items.map(row).join('')).join('');
+    const total = items.reduce((s, i) => s + i.calories, 0), several = groups.length > 1;
     $('log-food').disabled = !items.length || state.busy;
-    $('log-food').textContent = items.length ? `Log ${fmt(total)} cal` : 'Log';
-    $('save-goto').classList.toggle('hidden', !items.length);
+    $('log-food').textContent = items.length ? `Log ${fmt(total)} cal${several ? ` as ${groups.length} meals` : ''}` : 'Log';
+    // A go-to order or a meal-out tag is about one meal
+    $('save-goto').classList.toggle('hidden', !items.length || several);
+    $('log-tag-row').classList.toggle('hidden', several);
     return items;
   }
 
@@ -373,7 +398,7 @@
     if (!closed) {
       const groups = {};
       yRows.forEach(r => { (groups[r.entry_id] = groups[r.entry_id] || []).push(r); });
-      const ids = Object.keys(groups).sort();
+      const ids = byTime(groups);
       if (ids.length) {
         const last = groups[ids[ids.length - 1]];
         $('ck-close-text').textContent = `Yesterday: ${fmt(yCal)} cal. The last thing logged was at ${clock(last[0].time)}. Did you eat anything after that?`;
@@ -505,11 +530,11 @@
   }
 
   function logFood() {
-    const items = renderPreview();
-    if (!items.length) return;
-    const date = targetDate(), time = $('time').value || C.chicagoNow().time, tag = state.logTag;
-    return run('Logged', async () => {
-      const id = await writeEntry(date, time, items, `food: ${date} ${time} (app)`);
+    const { groups } = mealGroups();
+    if (!groups.length) return;
+    const date = targetDate(), time = groups[0].time, tag = groups.length > 1 ? '' : state.logTag;
+    return run(groups.length > 1 ? `Logged ${groups.length} meals` : 'Logged', async () => {
+      const [id] = await writeEntries(date, groups, `food: ${date} ${groups.length > 1 ? `${groups.length} meals` : time} (app)`);
       if (tag) await addEvent({ date, time, kind: 'tag', value: tag, ref: id }, `tag: ${id} ${tag} (app)`);
       $('food').value = '';
       state.logTag = '';
@@ -686,6 +711,7 @@
     renderPreview();
   });
   $('food').addEventListener('input', renderPreview);
+  $('time').addEventListener('input', renderPreview);
   $('log-food').addEventListener('click', logFood);
   $('save-goto').addEventListener('click', saveGoto);
   $('goto-chips').addEventListener('click', e => { if (e.target.dataset.order) logOrder(e.target.dataset.order); });

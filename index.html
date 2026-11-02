@@ -61,6 +61,7 @@ li { padding: 9px 0; border-top: 1px solid var(--line); display: flex; justify-c
 li:first-child { border-top: 0; }
 li .cal { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .flag { color: var(--amber); font-size: 12px; display: block; }
+#preview .meal-head { font-weight: 600; border-bottom: 0; padding-bottom: 0; }
 .entry-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); margin-top: 10px; gap: 6px; }
 .entry-head .acts { display: flex; align-items: center; flex: 0 0 auto; }
 .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 9px; margin-left: 6px;
@@ -230,8 +231,9 @@ label { font-size: 13px; color: var(--muted); display: block; margin: 10px 0 4px
       <div class="row" style="margin:10px 0"><label style="margin:0;flex:0 0 auto" for="time">Time eaten</label><input id="time" type="time"></div>
       <div id="goto-wrap" class="hidden"><div class="muted">Go-to orders: one tap logs it</div><div class="chips" id="goto-chips"></div></div>
       <textarea id="food" placeholder="200 g 2% milk, 1 scoop protein powder, a bag of broccoli"></textarea>
+      <p class="muted" style="margin:6px 0 8px;font-size:13px">Catching up? Write "Breakfast:", "Lunch:", "Dinner:" or "Snack:" and each meal gets its own entry and time.</p>
       <div class="chips" id="chips"></div>
-      <div class="row" style="margin:0 0 10px"><span class="muted" style="flex:0 0 auto">Meal out</span>
+      <div class="row" id="log-tag-row" style="margin:0 0 10px"><span class="muted" style="flex:0 0 auto">Meal out</span>
         <div class="seg small" id="log-tag"><button data-tag="" class="on">No</button><button data-tag="work">Work</button><button data-tag="celebration">Celebration</button></div></div>
       <ul id="preview"></ul>
       <button class="primary" id="log-food" disabled>Log</button>

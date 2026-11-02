@@ -123,3 +123,23 @@ assert.strictEqual(Core.bodyFat(46, 18, 71), null);
 assert.strictEqual(Core.isFriday('2026-11-06'), true);
 assert.strictEqual(Core.isFriday('2026-11-02'), false);
 console.log('ok  tape');
+
+// Meals in one message: [typed, expected [label, time, text] sections, skipped]
+const mealCases = [
+  ['200 g 2% milk, 1 bag of broccoli', [['', '', '200 g 2% milk, 1 bag of broccoli']], []],
+  ['Breakfast: 2 eggs\nLunch: soup\nDinner: chicken', [['Breakfast', '08:00', '2 eggs'], ['Lunch', '12:30', 'soup'], ['Dinner', '18:30', 'chicken']], []],
+  ['Breakfast: I had 2 eggs. Lunch: I had soup. Dinner: I had 6 oz chicken, and I had 1 yogurt for a snack',
+    [['Breakfast', '08:00', '2 eggs'], ['Lunch', '12:30', 'soup'], ['Dinner', '18:30', '6 oz chicken'], ['Evening snack', '20:30', '1 yogurt']], []],
+  ['No breakfast\nFor lunch I had:\n- soup\n- bread\nFor dinner I had:\n- pizza', [['Lunch', '12:30', '- soup\n- bread'], ['Dinner', '18:30', '- pizza']], ['Breakfast']],
+  ['For breakfast I had toast, for lunch I had soup, and for a snack I had yogurt',
+    [['Breakfast', '08:00', 'toast'], ['Lunch', '12:30', 'soup'], ['Afternoon snack', '15:00', 'yogurt']], []],
+  ['2 eggs, toast for breakfast. Soup for lunch', [['Breakfast', '08:00', '2 eggs, toast'], ['Lunch', '12:30', 'Soup']], []],
+  ['Late snack - 1 apple', [['Late snack', '22:00', '1 apple']], []],
+  ['2 breakfast sausage, 1 dinner roll, 1 lunch meat sandwich', [['', '', '2 breakfast sausage, 1 dinner roll, 1 lunch meat sandwich']], []],
+];
+mealCases.forEach(([typed, want, skipped]) => {
+  const got = Core.splitMeals(typed);
+  assert.deepStrictEqual(got.sections.map(s => [s.label, s.time, s.text]), want, typed);
+  assert.deepStrictEqual(got.skipped, skipped, typed);
+});
+console.log(`ok  ${mealCases.length} meal messages`);

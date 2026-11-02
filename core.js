@@ -269,6 +269,86 @@
     return segments.map(s => estimate(s, reference));
   }
 
+  // ---- Meals in one message ----
+  // "Breakfast: 2 eggs. Lunch: soup. Dinner: chicken, and I had yogurt for a snack" becomes one entry
+  // per meal at a usual time, so a catch-up doesn't read as everything eaten at once.
+
+  const MEAL_WORD = '(breakfast|brunch|lunch|dinner|supper|dessert|(?:(?:morning|afternoon|evening|late|late[- ]night|bedtime)\\s+)?snack)';
+  const MEAL_TIMES = { breakfast: ['Breakfast', '08:00'], brunch: ['Brunch', '10:30'], lunch: ['Lunch', '12:30'],
+    dinner: ['Dinner', '18:30'], supper: ['Dinner', '18:30'], dessert: ['Dessert', '19:30'],
+    'morning snack': ['Morning snack', '10:00'], 'afternoon snack': ['Afternoon snack', '15:00'],
+    'evening snack': ['Evening snack', '20:30'], 'late snack': ['Late snack', '22:00'],
+    'late night snack': ['Late snack', '22:00'], 'bedtime snack': ['Late snack', '22:00'] };
+  const ATE = '(?:(?:i|we)\\s+(?:also\\s+)?(?:had|ate|got)\\b|had\\b|ate\\b)';
+  const SKIP_MEAL = new RegExp("\\b(?:no|skipped|skip|nothing\\s+for|didn'?t\\s+(?:have|eat)|did\\s+not\\s+(?:have|eat))\\s+" + MEAL_WORD + '\\b[.,;!]?', 'gi');
+  // A heading has to open a clause: "breakfast sausage" and "soup for lunch" aren't headings.
+  const MEAL_HEAD = new RegExp('(?<=^\\s*|[\\n.;,!:]\\s*|\\b(?:and|then)\\s+)(?:' +
+    'for\\s+(?:a\\s+|my\\s+)?' + MEAL_WORD + '\\s*[,:\\-–—]*\\s*(?:' + ATE + ')?\\s*:?' +
+    '|' + MEAL_WORD + '(?:\\s*:|\\s+[-–—]+|\\s+' + ATE + '|\\s+(?:was|were)\\b)\\s*:?)', 'gi');
+  const MEAL_TAIL = new RegExp('\\bfor\\s+(?:a\\s+|my\\s+)?' + MEAL_WORD + '(?=\\s*(?:[.,;!\\n]|\\band\\b|\\bthen\\b|$))', 'gi');
+  const ATE_CLAUSE = new RegExp('(?:\\b(?:and|then|also)\\s+)*' + ATE, 'gi');
+
+  function mealSlot(word, previous) {
+    const w = word.toLowerCase().replace(/[- ]+/g, ' ');
+    if (w !== 'snack') return MEAL_TIMES[w];
+    // A plain "snack" goes by the meal before it
+    if (previous === 'Breakfast' || previous === 'Brunch') return MEAL_TIMES['morning snack'];
+    return previous === 'Dinner' || previous === 'Dessert' ? MEAL_TIMES['evening snack'] : MEAL_TIMES['afternoon snack'];
+  }
+
+  const cleanMeal = text => text.replace(ATE_CLAUSE, ', ').replace(/^[\s,.;:]+/, '').replace(/[\s,.;:]*\b(?:and|then)?[\s,.;:]*$/i, '').trim();
+
+  // Pulls "yogurt for a snack" out of a section. A list belongs together when nothing else claims it
+  // ("2 eggs, toast for breakfast"); after a heading only the last clause moves.
+  function tailMeals(body, headed) {
+    const out = [];
+    let from = 0, rest = '';
+    [...body.matchAll(MEAL_TAIL)].forEach(m => {
+      const before = body.slice(from, m.index);
+      const ate = [...before.matchAll(ATE_CLAUSE)].pop();
+      const comma = headed ? Math.max(before.lastIndexOf(','), before.lastIndexOf('\n')) : -1;
+      const start = ate ? ate.index : comma + 1;
+      rest += before.slice(0, start) + '\n';
+      out.push({ word: m[1], text: before.slice(start) });
+      from = m.index + m[0].length;
+      headed = false;
+    });
+    return { rest: rest + body.slice(from), tails: out };
+  }
+
+  // Sections in the order typed: { label, time, text }. No meal words gives one section with no label or time.
+  function splitMeals(text) {
+    const skipped = [];
+    let clean = text.replace(SKIP_MEAL, (whole, word) => { skipped.push(mealSlot(word, '')[0]); return '\n'; });
+    const heads = [...clean.matchAll(MEAL_HEAD)];
+    const raw = [];
+    const first = heads.length ? heads[0].index : clean.length;
+    raw.push({ word: null, body: clean.slice(0, first) });
+    heads.forEach((h, i) => {
+      const end = i + 1 < heads.length ? heads[i + 1].index : clean.length;
+      raw.push({ word: h[1] || h[2], body: clean.slice(h.index + h[0].length, end) });
+    });
+    const sections = [];
+    let previous = '';
+    const add = (word, body) => {
+      const slot = word ? mealSlot(word, previous) : null;
+      if (slot) previous = slot[0];
+      const food = cleanMeal(body);
+      if (/[a-z]/i.test(food)) sections.push({ label: slot ? slot[0] : '', time: slot ? slot[1] : '', text: food });
+    };
+    raw.forEach(s => {
+      const { rest, tails } = tailMeals(s.body, !!s.word);
+      if (!s.word && tails.length) { // "2 eggs for breakfast, soup for lunch": keep the typed order
+        tails.forEach(t => add(t.word, t.text));
+        add(null, rest);
+      } else {
+        add(s.word, rest);
+        tails.forEach(t => add(t.word, t.text));
+      }
+    });
+    return { sections, skipped };
+  }
+
   // ---- Ledger maths ----
 
   const num = v => (v === '' || v === undefined || v === null ? 0 : +v);
@@ -446,7 +526,7 @@
     sortFood, parseTargets, streak, num, github,
     PLAN_FIELDS, EVENT_FIELDS, ORDER_FIELDS, SLOTS, REQUIRED_SLOTS, PLAN_START, PLAN_CUTOFF, DEBRIEF,
     plannedAhead, planStreak, upsertPlans, weightTrend, bigDay, orderNames, orderItems,
-    MEASURE_FIELDS, bodyFat, isFriday };
+    MEASURE_FIELDS, bodyFat, isFriday, splitMeals };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Core = api;
 })(typeof self !== 'undefined' ? self : this);
