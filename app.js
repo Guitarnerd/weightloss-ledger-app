@@ -5,9 +5,11 @@
   const $ = id => document.getElementById(id);
   const PATHS = { food: 'data/food.csv', weight: 'data/weight.csv', days: 'data/days.csv',
     targets: 'targets.md', reference: 'data/reference.json',
-    plans: 'data/plans.csv', events: 'data/events.csv', orders: 'data/orders.csv' };
+    plans: 'data/plans.csv', events: 'data/events.csv', orders: 'data/orders.csv',
+    measurements: 'data/measurements.csv' };
   // Added with the morning check-in: if the ledger doesn't have them yet, start them empty.
-  const OPTIONAL = { [PATHS.plans]: C.PLAN_FIELDS, [PATHS.events]: C.EVENT_FIELDS, [PATHS.orders]: C.ORDER_FIELDS };
+  const OPTIONAL = { [PATHS.plans]: C.PLAN_FIELDS, [PATHS.events]: C.EVENT_FIELDS, [PATHS.orders]: C.ORDER_FIELDS,
+    [PATHS.measurements]: C.MEASURE_FIELDS };
   const QUICK = ['200 g 2% milk', '1 scoop protein powder', '170 g nonfat vanilla Greek yogurt', '1 bag broccoli',
     '1/8 cup shredded cheddar', '1 tbsp ranch dressing', '1 cup baby carrots', '3 eggs', '3 small corn tortillas'];
   const PLACEHOLDER = {
@@ -33,7 +35,7 @@
     const today = C.chicagoNow().date, y = C.addDays(today, -1);
     const id = d => d.replace(/-/g, '');
     const files = {
-      [PATHS.targets]: 'Calories: 1700\nProtein: 170 g\nCarbs: 128 g\nFat: 57 g\nGoal weight: 215 lb\n',
+      [PATHS.targets]: 'Calories: 1700\nProtein: 170 g\nCarbs: 128 g\nFat: 57 g\nGoal weight: 215 lb\nHeight: 71 in\n',
       [PATHS.food]: C.toCSV(C.FOOD_FIELDS, [
         { date: y, time: '12:10', entry_id: id(y) + '-01', item: '2% milk', quantity: 200, unit: 'g', calories: 100, protein_g: 7, carbs_g: 10, fat_g: 4, source: 'app', note: '' },
         { date: y, time: '18:40', entry_id: id(y) + '-02', item: 'Homemade chili', quantity: 1, unit: 'cup', calories: 280, protein_g: 20, carbs_g: 24, fat_g: 12, source: 'app', note: '' },
@@ -55,6 +57,7 @@
         { name: 'White rice', aliases: ['rice'], grams: 158, calories: 205, protein_g: 4, carbs_g: 45, fat_g: 0.4, units: { cup: 158 }, default: 'cup' },
         { name: 'Small corn tortilla', aliases: ['corn tortilla'], grams: 24, calories: 52, protein_g: 1, carbs_g: 11, fat_g: 1, units: { each: 24 }, default: 'each' }]),
       [PATHS.plans]: C.toCSV(C.PLAN_FIELDS, []),
+      [PATHS.measurements]: C.toCSV(C.MEASURE_FIELDS, [{ date: C.addDays(today, -7), neck_in: '18', waist_in: '46', body_fat_pct: '31.6', note: '' }]),
       [PATHS.events]: C.toCSV(C.EVENT_FIELDS, []),
       [PATHS.orders]: C.toCSV(C.ORDER_FIELDS, [
         { restaurant: 'Panera', item: 'Greek salad, half, no dressing', quantity: 1, unit: 'each', calories: 145, protein_g: 4, carbs_g: 10, fat_g: 10, note: '' },
@@ -230,7 +233,17 @@
       `<br><span class="muted">${last.date === today() ? 'Today' : C.prettyDate(last.date)}: ${esc(last.weight_lb)} lb</span>`;
   }
 
+  // Waist first; body fat is a rough estimate from it
+  function tapeHtml() {
+    const rows = csv(PATHS.measurements), last = rows[rows.length - 1];
+    if (!last) return 'No tape sessions yet.';
+    const prev = rows[rows.length - 2], diff = prev ? +last.waist_in - +prev.waist_in : null;
+    const dir = diff === null ? '' : Math.abs(diff) < 0.05 ? ' · same' : ` · ${diff < 0 ? 'down' : 'up'} ${Math.abs(diff).toFixed(1)} since ${C.prettyDate(prev.date)}`;
+    return `<b>Waist ${esc(last.waist_in)} in</b>${esc(dir)}<br><span class="muted">${C.prettyDate(last.date)}: neck ${esc(last.neck_in)} in · about ${Math.round(+last.body_fat_pct)}% body fat (rough)</span>`;
+  }
+
   function renderWeight() {
+    $('tape-line').innerHTML = tapeHtml();
     const rows = csv(PATHS.weight), goal = targets()['goal weight'];
     if (!rows.length) { $('weight-line').textContent = 'No weigh-ins yet.'; $('chart').innerHTML = ''; return; }
     const w = C.weightTrend(rows, today());
@@ -389,6 +402,13 @@
     $('ck-weigh').classList.toggle('done', weighed || skipped);
     $('ck-weigh-done').innerHTML = weighed ? trendHtml() : 'Skipped today';
 
+    // Friday tape session (skippable)
+    const friday = C.isFriday(t);
+    $('ck-tape').classList.toggle('hidden', !friday);
+    const taped = csv(PATHS.measurements).some(r => r.date === t), tapeSkipped = store.get('wl_skiptape') === t;
+    $('ck-tape').classList.toggle('done', friday && (taped || tapeSkipped));
+    $('ck-tape-done').innerHTML = taped ? tapeHtml() : 'Skipped today';
+
     renderCheckinNeeds();
   }
 
@@ -402,13 +422,14 @@
     $('ck-plan-done').textContent = inCheckin ? '' : 'The planner is open below.';
     const closed = yesterdayClosed();
     const weighDone = $('ck-weigh').classList.contains('done');
-    const done = [closed, weighDone, planned].filter(Boolean).length;
-    $('ck-progress').textContent = `${done} of 3`;
+    const friday = C.isFriday(today());
+    const steps = friday ? [closed, weighDone, planned, $('ck-tape').classList.contains('done')] : [closed, weighDone, planned];
+    $('ck-progress').textContent = `${steps.filter(Boolean).length} of ${steps.length}`;
     const need = [];
     if (!closed) need.push('close yesterday');
     if (!planned) need.push('plan dinner and the evening snack');
     $('ck-finish').disabled = state.busy || !closed || !planned;
-    $('ck-need').textContent = need.length ? 'To finish: ' + need.join(' and ') + '.' : 'Weighing in is optional.';
+    $('ck-need').textContent = need.length ? 'To finish: ' + need.join(' and ') + '.' : (friday ? 'Weighing in and the tape are optional.' : 'Weighing in is optional.');
   }
 
   function showWin() {
@@ -555,6 +576,23 @@
     });
   }
 
+  function logTape(neckId, waistId) {
+    const neck = parseFloat($(neckId).value), waist = parseFloat($(waistId).value), height = targets().height;
+    if (!(neck > 8 && neck < 40) || !(waist > 20 && waist < 90)) { toast('Enter neck and waist in inches', true); return; }
+    const pct = C.bodyFat(neck, waist, height);
+    if (pct === null) { toast('Waist has to be larger than neck', true); return; }
+    const date = today();
+    return run('Tape logged', async () => {
+      await mutate(PATHS.measurements, text => {
+        const rows = C.parseCSV(text).rows.filter(r => r.date !== date);
+        rows.push({ date, neck_in: String(neck), waist_in: String(waist), body_fat_pct: pct.toFixed(1), note: '' });
+        rows.sort((a, b) => a.date.localeCompare(b.date));
+        return C.toCSV(C.MEASURE_FIELDS, rows);
+      }, `tape: ${date} (app)`);
+      $(neckId).value = ''; $(waistId).value = '';
+    });
+  }
+
   function closeYesterday() {
     const date = C.addDays(today(), -1), note = $('ck-close-note').value.trim() || 'closed in app';
     return run('Yesterday closed', async () => {
@@ -694,6 +732,9 @@
   });
   $('ck-weight-btn').addEventListener('click', () => logWeight('ck-weight'));
   $('ck-weight-skip').addEventListener('click', () => { store.set('wl_skipweigh', today()); render(); });
+  $('ck-tape-btn').addEventListener('click', () => logTape('ck-neck', 'ck-waist'));
+  $('ck-tape-skip').addEventListener('click', () => { store.set('wl_skiptape', today()); render(); });
+  $('log-tape').addEventListener('click', () => logTape('neck', 'waist'));
   $('ck-finish').addEventListener('click', finishCheckin);
   $('win').addEventListener('click', () => $('win').classList.add('hidden'));
 

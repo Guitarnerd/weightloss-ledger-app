@@ -8,7 +8,7 @@ const Core = require('./core.js');
 const ledger = process.argv[2] || path.join(__dirname, '..', 'weightloss-ledger');
 const reference = JSON.parse(fs.readFileSync(path.join(ledger, 'data/reference.json'), 'utf8'));
 
-for (const file of ['food.csv', 'weight.csv', 'days.csv', 'plans.csv', 'events.csv', 'orders.csv']) {
+for (const file of ['food.csv', 'weight.csv', 'days.csv', 'plans.csv', 'events.csv', 'orders.csv', 'measurements.csv']) {
   const text = fs.readFileSync(path.join(ledger, 'data', file), 'utf8').replace(/\r\n/g, '\n');
   const { header, rows } = Core.parseCSV(text);
   assert.strictEqual(Core.toCSV(header, rows), text, `${file} does not round-trip`);
@@ -116,3 +116,10 @@ const orders = [{ restaurant: 'Panera', item: 'Soup', quantity: '1', unit: 'cup'
 assert.deepStrictEqual(Core.orderNames(orders), ['Chick-fil-A', 'Panera']);
 assert.deepStrictEqual(Core.orderItems(orders, 'Panera').map(i => [i.item, i.calories, i.source]), [['Soup', 180, 'saved']]);
 console.log('ok  plans, planning streak, weight trend, debrief, go-to orders');
+
+// Tape: Navy formula, and Fridays in the ledger's calendar
+assert.strictEqual(Core.bodyFat(18, 46, 71), 31.6);
+assert.strictEqual(Core.bodyFat(46, 18, 71), null);
+assert.strictEqual(Core.isFriday('2026-11-06'), true);
+assert.strictEqual(Core.isFriday('2026-11-02'), false);
+console.log('ok  tape');

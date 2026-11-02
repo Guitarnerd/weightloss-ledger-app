@@ -324,6 +324,7 @@
   const SLOTS = [['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['afternoon', 'Afternoon snack'],
     ['dinner', 'Dinner'], ['evening', 'Evening snack']];
   const REQUIRED_SLOTS = ['dinner', 'evening'];
+  const MEASURE_FIELDS = ['date', 'neck_in', 'waist_in', 'body_fat_pct', 'note'];
   const PLAN_START = '2026-10-15';
   const PLAN_CUTOFF = '16:00';
   const DEBRIEF = [['arrived hungry', 'Arrived hungry'], ['grazing at the event', 'Grazing at the event'],
@@ -433,11 +434,19 @@
     };
   }
 
+  // US Navy tape formula for men, all in inches; usually within 3 or 4 points
+  function bodyFat(neck, waist, height) {
+    if (!(waist > neck) || !(height > 0)) return null;
+    return Math.round((86.010 * Math.log10(waist - neck) - 70.041 * Math.log10(height) + 36.76) * 10) / 10;
+  }
+  const isFriday = date => new Date(date + 'T12:00:00Z').getUTCDay() === 5;
+
   const api = { FOOD_FIELDS, WEIGHT_FIELDS, DAYS_FIELDS, MACROS, parseCSV, toCSV, chicagoNow, addDays,
     prettyDate, splitQuantity, splitSegments, bestMatch, estimate, parseEntry, totals, nextEntryId,
     sortFood, parseTargets, streak, num, github,
     PLAN_FIELDS, EVENT_FIELDS, ORDER_FIELDS, SLOTS, REQUIRED_SLOTS, PLAN_START, PLAN_CUTOFF, DEBRIEF,
-    plannedAhead, planStreak, upsertPlans, weightTrend, bigDay, orderNames, orderItems };
+    plannedAhead, planStreak, upsertPlans, weightTrend, bigDay, orderNames, orderItems,
+    MEASURE_FIELDS, bodyFat, isFriday };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Core = api;
 })(typeof self !== 'undefined' ? self : this);

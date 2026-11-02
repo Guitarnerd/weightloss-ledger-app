@@ -11,10 +11,11 @@ A small installable web app for logging food and weight from a phone. It has no 
 - **End-of-meal mark** ("Gum in", renamable in Settings) on any entry. No scoring.
 - **Optional debrief** after a big day: one skippable "when did it turn?" question.
 - **Weight** entry and a 60-day chart, led by the 7-day average.
+- **Tape session**: waist and neck in inches, a skippable step in Friday's check-in and always available on the Weight card. Shows the waist trend and a rough body-fat estimate.
 
 Over-target days are shown plainly, without red warnings, and nothing in the app lowers a target or suggests making up for a day.
 
-The ledger files it uses: `data/food.csv`, `data/weight.csv`, `data/days.csv`, `data/plans.csv`, `data/events.csv`, `data/orders.csv`, `data/reference.json` and `targets.md`. The last three CSVs are created on first write if the ledger doesn't have them yet.
+The ledger files it uses: `data/food.csv`, `data/weight.csv`, `data/days.csv`, `data/plans.csv`, `data/events.csv`, `data/orders.csv`, `data/measurements.csv`, `data/reference.json` and `targets.md`. The last four CSVs are created on first write if the ledger doesn't have them yet.
 
 ## Setup
 

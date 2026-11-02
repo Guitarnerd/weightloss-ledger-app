@@ -187,6 +187,16 @@ label { font-size: 13px; color: var(--muted); display: block; margin: 10px 0 4px
         <div class="step-done" id="ck-weigh-done"></div>
       </div>
 
+      <div class="step hidden" id="ck-tape">
+        <div class="step-head"><span class="dot"></span><span>Friday tape</span></div>
+        <div class="step-body">
+          <p class="muted" style="margin:0 0 8px">Before eating. Waist at the navel, relaxed, after a normal breath out. Neck just below the Adam's apple.</p>
+          <div class="row"><input id="ck-neck" type="number" inputmode="decimal" step="0.25" placeholder="Neck, in"><input id="ck-waist" type="number" inputmode="decimal" step="0.25" placeholder="Waist, in"></div>
+          <div class="row" style="margin-top:8px"><button id="ck-tape-btn">Log tape</button><button class="ghost" id="ck-tape-skip" style="flex:0 0 auto">Skip</button></div>
+        </div>
+        <div class="step-done" id="ck-tape-done"></div>
+      </div>
+
       <div class="step" id="ck-plan">
         <div class="step-head"><span class="dot"></span><span>Plan today</span></div>
         <div class="step-body" id="ck-plan-body"></div>
@@ -238,6 +248,10 @@ label { font-size: 13px; color: var(--muted); display: block; margin: 10px 0 4px
       <div class="row"><input id="weight" type="number" inputmode="decimal" step="0.1" placeholder="lb"><button id="log-weight" style="flex:0 0 auto">Log weight</button></div>
       <p id="weight-line" style="margin:12px 0 6px"></p>
       <div id="chart"></div>
+      <h3 style="margin:16px 0 8px;font-size:1rem">Tape</h3>
+      <p id="tape-line" style="margin:0 0 8px"></p>
+      <div class="row"><input id="neck" type="number" inputmode="decimal" step="0.25" placeholder="Neck, in"><input id="waist" type="number" inputmode="decimal" step="0.25" placeholder="Waist, in"></div>
+      <div class="row" style="margin-top:8px"><button id="log-tape">Log tape</button></div>
     </section>
     <p class="muted" id="foot" style="text-align:center"></p>
   </div>
