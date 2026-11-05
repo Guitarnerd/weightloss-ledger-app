@@ -273,12 +273,12 @@
   // "Breakfast: 2 eggs. Lunch: soup. Dinner: chicken, and I had yogurt for a snack" becomes one entry
   // per meal at a usual time, so a catch-up doesn't read as everything eaten at once.
 
-  const MEAL_WORD = '(breakfast|brunch|lunch|dinner|supper|dessert|(?:(?:morning|afternoon|evening|late|late[- ]night|bedtime)\\s+)?snack)';
+  const MEAL_WORD = '(breakfast|brunch|lunch|dinner|supper|dessert|(?:(?:morning|afternoon|evening|late|late[- ]night|midnight|bedtime)\\s+)?snack)';
   const MEAL_TIMES = { breakfast: ['Breakfast', '08:00'], brunch: ['Brunch', '10:30'], lunch: ['Lunch', '12:30'],
     dinner: ['Dinner', '18:30'], supper: ['Dinner', '18:30'], dessert: ['Dessert', '19:30'],
     'morning snack': ['Morning snack', '10:00'], 'afternoon snack': ['Afternoon snack', '15:00'],
     'evening snack': ['Evening snack', '20:30'], 'late snack': ['Late snack', '22:00'],
-    'late night snack': ['Late snack', '22:00'], 'bedtime snack': ['Late snack', '22:00'] };
+    'late night snack': ['Late snack', '22:00'], 'bedtime snack': ['Late snack', '22:00'], 'midnight snack': ['Midnight snack', '23:30'] };
   const ATE = '(?:(?:i|we)\\s+(?:also\\s+)?(?:had|ate|got)\\b|had\\b|ate\\b)';
   const SKIP_MEAL = new RegExp("\\b(?:no|skipped|skip|nothing\\s+for|didn'?t\\s+(?:have|eat)|did\\s+not\\s+(?:have|eat))\\s+" + MEAL_WORD + '\\b[.,;!]?', 'gi');
   // A heading has to open a clause: "breakfast sausage" and "soup for lunch" aren't headings.

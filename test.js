@@ -135,6 +135,7 @@ const mealCases = [
     [['Breakfast', '08:00', 'toast'], ['Lunch', '12:30', 'soup'], ['Afternoon snack', '15:00', 'yogurt']], []],
   ['2 eggs, toast for breakfast. Soup for lunch', [['Breakfast', '08:00', '2 eggs, toast'], ['Lunch', '12:30', 'Soup']], []],
   ['Late snack - 1 apple', [['Late snack', '22:00', '1 apple']], []],
+  ['Dinner: 1 taco. Midnight snack: 2 slices of bread', [['Dinner', '18:30', '1 taco'], ['Midnight snack', '23:30', '2 slices of bread']], []],
   ['2 breakfast sausage, 1 dinner roll, 1 lunch meat sandwich', [['', '', '2 breakfast sausage, 1 dinner roll, 1 lunch meat sandwich']], []],
 ];
 mealCases.forEach(([typed, want, skipped]) => {
