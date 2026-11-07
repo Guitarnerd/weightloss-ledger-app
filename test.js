@@ -135,6 +135,10 @@ const mealCases = [
     [['Breakfast', '08:00', 'toast'], ['Lunch', '12:30', 'soup'], ['Afternoon snack', '15:00', 'yogurt']], []],
   ['2 eggs, toast for breakfast. Soup for lunch', [['Breakfast', '08:00', '2 eggs, toast'], ['Lunch', '12:30', 'Soup']], []],
   ['Late snack - 1 apple', [['Late snack', '22:00', '1 apple']], []],
+  ['Morning. I had my shake. At noon I had a tomato salad. When I got home I had chicken',
+    [['Breakfast', '08:00', 'my shake'], ['Lunch', '12:00', 'a tomato salad'], ['Dinner', '18:30', 'chicken']], []],
+  ['Afternoon snack: 1 apple', [['Afternoon snack', '15:00', '1 apple']], []],
+  ['I had eggs in the morning', [['', '', 'eggs in the morning']], []],
   ['Dinner: 1 taco. Midnight snack: 2 slices of bread', [['Dinner', '18:30', '1 taco'], ['Midnight snack', '23:30', '2 slices of bread']], []],
   ['2 breakfast sausage, 1 dinner roll, 1 lunch meat sandwich', [['', '', '2 breakfast sausage, 1 dinner roll, 1 lunch meat sandwich']], []],
 ];

@@ -125,6 +125,7 @@
   function splitQuantity(segment) {
     let s = segment.toLowerCase().trim().replace(/^[-*•·]\s*/, '');
     while (FILLER.test(s)) s = s.replace(FILLER, '');
+    s = s.replace(/^(?:a|an)\s+(?=\d)/, ''); // "a 6 oz chicken breast"
     let quantity = null, unit = null, name = s, m;
 
     const word = s.match(/^([a-z]+)\s+(.*)$/);
@@ -285,11 +286,20 @@
   const MEAL_HEAD = new RegExp('(?<=^\\s*|[\\n.;,!:]\\s*|\\b(?:and|then)\\s+)(?:' +
     'for\\s+(?:a\\s+|my\\s+)?' + MEAL_WORD + '\\s*[,:\\-–—]*\\s*(?:' + ATE + ')?\\s*:?' +
     '|' + MEAL_WORD + '(?:\\s*:|\\s+[-–—]+|\\s+' + ATE + '|\\s+(?:was|were)\\b)\\s*:?)', 'gi');
+  // Time of day as a heading: "Morning. I had...", "At noon I had...", "When I got home I had..."
+  const TIME_WORD = '((?:this\\s+|in\\s+the\\s+)?morning|(?:at\\s+)?noon|(?:this\\s+|in\\s+the\\s+)?afternoon|' +
+    '(?:this\\s+|in\\s+the\\s+)?evening|tonight|when\\s+i\\s+got\\s+home|after\\s+work)';
+  const TIME_HEAD = new RegExp('(?<=^\\s*|[\\n.;,!:]\\s*|\\b(?:and|then)\\s+)' + TIME_WORD +
+    '(?:\\s*[:.,]|\\s+[-–—]+|\\s+' + ATE + ')\\s*:?', 'gi');
+  const TIME_SLOTS = { morning: ['Breakfast', '08:00'], noon: ['Lunch', '12:00'], afternoon: ['Afternoon snack', '15:00'],
+    evening: ['Dinner', '18:30'], tonight: ['Dinner', '18:30'], 'when i got home': ['Dinner', '18:30'], 'after work': ['Dinner', '18:30'] };
   const MEAL_TAIL = new RegExp('\\bfor\\s+(?:a\\s+|my\\s+)?' + MEAL_WORD + '(?=\\s*(?:[.,;!\\n]|\\band\\b|\\bthen\\b|$))', 'gi');
   const ATE_CLAUSE = new RegExp('(?:\\b(?:and|then|also)\\s+)*' + ATE, 'gi');
 
   function mealSlot(word, previous) {
     const w = word.toLowerCase().replace(/[- ]+/g, ' ');
+    const time = w.replace(/^(?:this|in the|at) /, '');
+    if (TIME_SLOTS[time]) return TIME_SLOTS[time];
     if (w !== 'snack') return MEAL_TIMES[w];
     // A plain "snack" goes by the meal before it
     if (previous === 'Breakfast' || previous === 'Brunch') return MEAL_TIMES['morning snack'];
@@ -320,13 +330,16 @@
   function splitMeals(text) {
     const skipped = [];
     let clean = text.replace(SKIP_MEAL, (whole, word) => { skipped.push(mealSlot(word, '')[0]); return '\n'; });
-    const heads = [...clean.matchAll(MEAL_HEAD)];
+    const meals = [...clean.matchAll(MEAL_HEAD)].map(h => ({ index: h.index, end: h.index + h[0].length, word: h[1] || h[2] }));
+    const times = [...clean.matchAll(TIME_HEAD)].map(h => ({ index: h.index, end: h.index + h[0].length, word: h[1] }))
+      .filter(t => !meals.some(m => t.index < m.end && m.index < t.end));
+    const heads = meals.concat(times).sort((a, b) => a.index - b.index);
     const raw = [];
     const first = heads.length ? heads[0].index : clean.length;
     raw.push({ word: null, body: clean.slice(0, first) });
     heads.forEach((h, i) => {
       const end = i + 1 < heads.length ? heads[i + 1].index : clean.length;
-      raw.push({ word: h[1] || h[2], body: clean.slice(h.index + h[0].length, end) });
+      raw.push({ word: h.word, body: clean.slice(h.end, end) });
     });
     const sections = [];
     let previous = '';
