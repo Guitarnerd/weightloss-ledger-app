@@ -284,7 +284,7 @@
   const SKIP_MEAL = new RegExp("\\b(?:no|skipped|skip|nothing\\s+for|didn'?t\\s+(?:have|eat)|did\\s+not\\s+(?:have|eat))\\s+" + MEAL_WORD + '\\b[.,;!]?', 'gi');
   // A heading has to open a clause: "breakfast sausage" and "soup for lunch" aren't headings.
   const MEAL_HEAD = new RegExp('(?<=^\\s*|[\\n.;,!:]\\s*|\\b(?:and|then)\\s+)(?:' +
-    'for\\s+(?:a\\s+|my\\s+)?' + MEAL_WORD + '\\s*[,:\\-–—]*\\s*(?:' + ATE + ')?\\s*:?' +
+    '(?:for|at)\\s+(?:a\\s+|my\\s+)?' + MEAL_WORD + '\\s*[,:\\-–—]*\\s*(?:' + ATE + ')?\\s*:?' +
     '|' + MEAL_WORD + '(?:\\s*:|\\s+[-–—]+|\\s+' + ATE + '|\\s+(?:was|were)\\b)\\s*:?)', 'gi');
   // Time of day as a heading: "Morning. I had...", "At noon I had...", "When I got home I had..."
   const TIME_WORD = '((?:this\\s+|in\\s+the\\s+)?morning|(?:at\\s+)?noon|(?:this\\s+|in\\s+the\\s+)?afternoon|' +
